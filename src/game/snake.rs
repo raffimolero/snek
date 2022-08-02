@@ -1,25 +1,6 @@
-use macroquad::prelude::*;
-
 use super::{Coord, BOARD_SZ};
 use crate::util::{Direction, Point};
 use std::collections::VecDeque;
-
-pub enum Tile {
-    Snek,
-    Head,
-    Food,
-    Bonk,
-}
-impl From<Tile> for Color {
-    fn from(tile: Tile) -> Self {
-        match tile {
-            Tile::Snek => color_u8!(128, 255, 64, 255),
-            Tile::Head => color_u8!(64, 255, 128, 255),
-            Tile::Food => color_u8!(128, 64, 255, 255),
-            Tile::Bonk => color_u8!(255, 64, 128, 255),
-        }
-    }
-}
 
 pub struct Snake {
     pub(super) direction: Direction,

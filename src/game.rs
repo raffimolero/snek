@@ -1,6 +1,6 @@
 pub mod snake;
 
-use self::snake::{Snake, Tile};
+use self::snake::Snake;
 use crate::util::{draw_text_centered, Direction, Point};
 use std::collections::VecDeque;
 
@@ -10,6 +10,7 @@ use macroquad::prelude::*;
 pub type Coord = i8;
 pub const BOARD_SZ: Point<Coord> = Point { x: 24, y: 16 };
 
+// add some common operations
 impl Point<Coord> {
     pub fn random(max: Self) -> Self {
         let mut rng = thread_rng();
@@ -55,6 +56,25 @@ impl GridProportions {
     }
 }
 
+// a colored tile that can be drawn
+enum Tile {
+    Snek,
+    Head,
+    Food,
+    Bonk,
+}
+impl From<Tile> for Color {
+    fn from(tile: Tile) -> Self {
+        use Tile::*;
+        match tile {
+            Snek => color_u8!(128, 255, 64, 255),
+            Head => color_u8!(64, 255, 128, 255),
+            Food => color_u8!(128, 64, 255, 255),
+            Bonk => color_u8!(255, 64, 128, 255),
+        }
+    }
+}
+
 pub enum GameState {
     Playing,
     Dead { collision: Point<Coord> },
@@ -79,6 +99,7 @@ impl Game {
     }
 
     pub fn take_input(&mut self) {
+        // restart on enter
         if let GameState::Dead { .. } = self.state {
             if is_key_pressed(KeyCode::Enter) {
                 *self = Self::new();
@@ -92,6 +113,7 @@ impl Game {
             (KeyCode::Left, Direction::Left),
             (KeyCode::Right, Direction::Right),
         ] {
+            // queue inputs so you can press up right down left really quickly and the snek will follow
             if is_key_pressed(key_code) {
                 self.input_queue.push_back(desired_direction);
             }
@@ -104,13 +126,14 @@ impl Game {
             return;
         }
 
-        // move snek
+        // turn snek based on input queue
         if let Some(direction) = self.input_queue.pop_front() {
             if direction != self.snake.direction.opposite() {
                 self.snake.direction = direction;
             }
         }
 
+        // move snek forward
         let mut head = *self.snake.segments.front().expect("head disappeared");
         head.move_towards(self.snake.direction);
         head.wrap(BOARD_SZ);
@@ -118,8 +141,11 @@ impl Game {
 
         // check food collision
         if head == self.food {
+            // eat food, place new food somewhere
             self.food = self.snake.random_unoccupied_point();
+            // tail stays in place
         } else {
+            // no eat food, tail disappears
             self.snake.segments.pop_back();
         }
 
@@ -128,15 +154,15 @@ impl Game {
             .snake
             .segments
             .iter()
-            .skip(1)
+            .skip(1) // don't compare the head with the head
             .find(|&segment| *segment == head)
         {
             self.state = GameState::Dead { collision };
-            return;
         }
     }
 
     pub fn draw_frame(&self) {
+        // calculate grid proportions
         let GridProportions { tile_size, margin } = GridProportions::calculate();
         let draw_tile = |Point { x, y }: Point<Coord>, tile: Tile| {
             draw_rectangle(
@@ -156,9 +182,11 @@ impl Game {
                 draw_tile(*segment, Tile::Snek);
             }
         }
+
         // draw food
         draw_tile(self.food, Tile::Food);
 
+        // draw collision point (ouch)
         if let GameState::Dead { collision } = self.state {
             draw_tile(collision, Tile::Bonk);
 
